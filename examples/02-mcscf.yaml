@@ -1,0 +1,11 @@
+Mole:
+  atom: |
+    N 0 0 -0.6
+    N 0 0  0.6
+  basis: 6-31g
+  symmetry: True
+HF:
+  results:
+    e_tot
+CASSCF(6, 6):
+  results: e_tot
