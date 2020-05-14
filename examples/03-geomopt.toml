@@ -9,5 +9,7 @@ basis = "6-31g"
 
 [KS]
 conv_tol = 1e-7
-xc = "b3lyp"
+xc = "pbe"
 results = "e_tot"
+
+[geomopt]

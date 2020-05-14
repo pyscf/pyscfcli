@@ -28,7 +28,9 @@ import warnings
 import argparse
 import importlib
 import yaml
+import ruamel.yaml
 import toml
+import jinja2
 from collections import OrderedDict
 
 import numpy as np
@@ -47,21 +49,22 @@ _SCF_METHODS = (
 )
 
 def _load_input_config(args):
-    ext = os.path.splitext(args.config)[1]
-    if args.key and ext == '.json':
-        raise NotImplementedError('Template for json is not supported')
-
     with open(args.config, 'r') as f:
         conf = f.read()
 
     if args.key:
         kwargs = dict([k.split('=') for k in args.key])
-        conf = conf.format(**kwargs)
+        if '{{' in conf:
+            conf = jinja2.Template(conf).render(**kwargs)
+        else:
+            conf = conf.format(**kwargs)
 
+    ext = os.path.splitext(args.config)[1]
     if ext in ('.yaml', '.yml'):
         if sys.version_info >= (3, 7):
-            parse = yaml.safe_load
+            parse = ruamel.yaml.safe_load
         else:
+            # FIXME:
             class OrderedLoader(yaml.Loader):
                 pass
             def construct_mapping(loader, node):
@@ -124,6 +127,8 @@ def _update_attributes(ctx, config):
 def _make_output(result, args):
     if args.output == 'json':
         out = json.dumps(result, indent=4)
+    elif args.output == 'toml':
+        out = toml.dump(result)
     elif args.output == 'QCSchema':
         warnings.warn('Output format QCSchema is not supported in current version')
         out = json.dumps(result, indent=4)
@@ -233,7 +238,10 @@ class _Task(object):
             print('%s = pyscf.M(%s)' % (ctx, args))
             self._ctx.append(ctx)
         else:
-            ctx = pyscf.M(**config)
+            if 'verbose' in config:
+                ctx = pyscf.M(**config)
+            else:
+                ctx = pyscf.M(**config, verbose=2)
             self._ctx.append(ctx)
 
         self.extract_results(entry_name, ctx)

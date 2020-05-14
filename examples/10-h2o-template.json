@@ -1,0 +1,11 @@
+{
+    "Mole": {
+        "atom": "O 0 0 {{r}}\nH 0 -0.757 0.587\nH 0  0.757 0.587\n",
+        "basis": "6-31g"
+    },
+    "KS": {
+        "conv_tol": 1e-07,
+        "xc": "b3lyp",
+        "results": "e_tot"
+    }
+}

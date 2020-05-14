@@ -51,6 +51,7 @@ install_requires=[
     'pyscf',
     'pyyaml',
     'toml',
+    'jinja2',
     'geometric',
     'pyberny',
 ]
