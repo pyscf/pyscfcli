@@ -1,3 +1,5 @@
+# Run the script with
+# pyscf 02-mcscf.yaml
 Mole:
   atom: |
     N 0 0 -0.6

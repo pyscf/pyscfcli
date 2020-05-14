@@ -1,4 +1,4 @@
-# pyscfcli -c 10-h2o-template.yaml -k r=0.5
+# pyscfcli -k r=0.5 10-h2o-template.yaml
 Mole:
   atom: |
     O 0 0 {r}

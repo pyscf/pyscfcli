@@ -1,0 +1,13 @@
+{
+    "Mole": {
+        "atom": "N 0 0 -0.6\nN 0 0  0.6\n",
+        "basis": "6-31g",
+        "symmetry": true
+    },
+    "HF": {
+        "results": "e_tot"
+    },
+    "CASSCF(6, 6)": {
+        "results": "e_tot"
+    }
+}

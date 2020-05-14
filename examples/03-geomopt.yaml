@@ -1,5 +1,5 @@
 # Run the script with
-# pyscf 01-h2o.yaml
+# pyscf 03-geomopt.yaml
 Mole:
   atom: |
     O 0 0 0
@@ -8,4 +8,6 @@ Mole:
   basis: 6-31g
 KS:
   conv_tol: 1.e-7
+  xc: pbe
   results: e_tot
+geomopt:

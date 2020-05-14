@@ -1,0 +1,12 @@
+# Run the script with
+# pyscf 01-h2o.toml
+
+[Mole]
+atom = """O 0 0 0
+H 0 -0.757 0.587
+H 0  0.757 0.587"""
+basis = "6-31g"
+
+[KS]
+conv_tol = 1e-7
+results = "e_tot"

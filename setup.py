@@ -47,6 +47,14 @@ AUTHOR_EMAIL     = 'osirpt.sun@gmail.com'
 PLATFORMS        = ['Linux', 'Mac OS-X', 'Unix']
 VERSION          = '0.1'
 
+install_requires=[
+    'pyscf',
+    'pyyaml',
+    'toml',
+    'geometric',
+    'pyberny',
+]
+
 
 setup(
     name=NAME,
@@ -61,14 +69,10 @@ setup(
     platforms=PLATFORMS,
     include_package_data=True,
     packages=find_packages(),
-    install_requires=[
-        'pyscf',
-        'pyyaml',
-        'geometric'
-    ],
+    install_requires=install_requires,
     entry_points={
         'console_scripts': [
-            'pyscfcli = pyscfcli.cli:main'
+            'pyscf = pyscfcli.cli:main'
         ]
     },
 )

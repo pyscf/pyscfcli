@@ -28,6 +28,7 @@ import warnings
 import argparse
 import importlib
 import yaml
+import toml
 from collections import OrderedDict
 
 import numpy as np
@@ -46,6 +47,10 @@ _SCF_METHODS = (
 )
 
 def _load_input_config(args):
+    ext = os.path.splitext(args.config)[1]
+    if args.key and ext == '.json':
+        raise NotImplementedError('Template for json is not supported')
+
     with open(args.config, 'r') as f:
         conf = f.read()
 
@@ -53,7 +58,6 @@ def _load_input_config(args):
         kwargs = dict([k.split('=') for k in args.key])
         conf = conf.format(**kwargs)
 
-    ext = os.path.splitext(args.config)[1]
     if ext in ('.yaml', '.yml'):
         if sys.version_info >= (3, 7):
             parse = yaml.safe_load
@@ -67,6 +71,8 @@ def _load_input_config(args):
                 yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
                 construct_mapping)
             parse = lambda conf: yaml.load(conf, OrderedLoader)
+    elif ext == '.toml':
+        parse = toml.loads
     elif ext == '.json':
         parse = json.loads
     elif ext == '.py':
@@ -385,7 +391,7 @@ class _Task(object):
 def main(args=None):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-c', '--config', help='input config file. It can be a config template.')
+    parser.add_argument('config', help='input config file. It can be a template.')
     parser.add_argument('-o', '--output', default='yaml', choices=['yaml', 'json', 'QCSchema'],
                         help='output format')
     parser.add_argument('-k','--key', action='append', metavar='key=value',
