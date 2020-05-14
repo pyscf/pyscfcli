@@ -13,3 +13,19 @@ xc = "pbe"
 results = "e_tot"
 
 [geomopt]
+
+# After geomopt session, there can put subsequent calculations based on new geometry
+# Notice the suffix -1 to avoid name conflicts
+[Mole-1]
+# new basis will be applied in the following calculations
+basis = "6-311g(d,p)"
+
+# Notice the suffix -1 and -2 to avoid name conflicts
+[KS-1]
+xc = "b3lyp"
+results = "e_tot"
+
+[KS-2]
+xc = "camb3lyp"
+results = "e_tot"
+

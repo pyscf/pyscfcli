@@ -206,20 +206,21 @@ class _Task(object):
                     results[token] = val
             config['results'] = results
 
-    def _basic_handler(self, entry_name, ctx, instance=None):
+    def _basic_handler(self, entry_name, ctx, instance_name=None):
         config = self.config[entry_name]
+        klass = entry_name.split('-')[0]
 
         if self.dry_run:
-            if instance is None:
-                instance = entry_name + '_instance'
-            ctx, last_ctx = instance, ctx
-            print('%s = %s.%s()' % (ctx, last_ctx, entry_name))
+            if instance_name is None:
+                instance_name = klass + '_instance'
+            ctx, last_ctx = instance_name, ctx
+            print('%s = %s.%s()' % (ctx, last_ctx, klass))
             statements = '\n'.join(_assignment_statements(config, ctx))
             if statements:
                 print(statements)
             print('%s = %s.run()' % (ctx, ctx))
         else:
-            ctx, last_ctx = getattr(ctx, entry_name)(), ctx
+            ctx, last_ctx = getattr(ctx, klass)(), ctx
             ctx = _update_attributes(ctx, config)
             ctx = ctx.run()
 
@@ -229,19 +230,27 @@ class _Task(object):
 
     def handle_mole_cell(self, entry_name, ctx):
         config = self.config[entry_name]
+        klass = entry_name.split('-')[0]
+
         if self.dry_run:
             args = ',\n    '.join(_assignment_statements(config))
-            if entry_name == 'Mole':
-                ctx = 'mol'
+            if ctx is None:
+                if klass == 'Mole':
+                    ctx = 'mol'
+                else:
+                    ctx = 'cell'
+                print('%s = pyscf.M(%s)' % (ctx, args))
             else:
-                ctx = 'cell'
-            print('%s = pyscf.M(%s)' % (ctx, args))
+                print('%s.build(%s)' % (ctx, args))
             self._ctx.append(ctx)
         else:
-            if 'verbose' in config:
-                ctx = pyscf.M(**config)
+            if ctx is None:
+                if 'verbose' in config:
+                    ctx = pyscf.M(**config)
+                else:
+                    ctx = pyscf.M(**config, verbose=2)
             else:
-                ctx = pyscf.M(**config, verbose=2)
+                ctx.build(**config)
             self._ctx.append(ctx)
 
         self.extract_results(entry_name, ctx)
@@ -249,20 +258,31 @@ class _Task(object):
 
     def handle_scf(self, entry_name, ctx):
         config = self.config[entry_name]
+        klass = entry_name.split('-')[0]
+
         mf_methods = ('density_fit', 'mix_density_fit', 'x2c', 'sfx2c', 'x2c1e', 'sfx2c1e', 'newton')
         config_pass1 = dict([(k, v) for k, v in config.items() if k not in mf_methods])
         config_pass2 = OrderedDict([(k, config[k]) for k in mf_methods if k in config])
 
         if self.dry_run:
             ctx, last_ctx = 'mf', ctx
-            print('%s = %s.%s()' % (ctx, last_ctx, entry_name))
+            if last_ctx in ('mol', 'cell'):
+                print('%s = %s.%s()' % (ctx, last_ctx, klass))
+            else:
+                print('%s = %s.mol.%s()' % (ctx, last_ctx, klass))
             print('\n'.join(_assignment_statements(config_pass1, ctx)))
             for token, val in config_pass2.items():
                 args = ',\n    '.join(_assignment_statements(val))
                 print('%s = %s.%s(%s)' % (ctx, ctx, token, args))
             print('%s = %s.run()' % (ctx, ctx))
         else:
-            ctx, last_ctx = getattr(ctx, entry_name)(), ctx
+            if isinstance(ctx, pyscf.gto.Mole):
+                ctx, last_ctx = getattr(ctx, klass)(), ctx
+            elif hasattr(ctx, 'cell'):
+                ctx, last_ctx = getattr(ctx.cell, klass)(), ctx
+            else:
+                ctx, last_ctx = getattr(ctx.mol, klass)(), ctx
+
             _update_attributes(ctx, config_pass1)
             for token, val in config_pass2.items():
                 ctx = getattr(ctx, token)(**val)
@@ -274,8 +294,9 @@ class _Task(object):
         return ctx
 
     def handle_solvent_model(self, entry_name, ctx):
-        if entry_name not in ('ddCOSMO', 'ddPCM'):
-            raise RuntimeError('Invalid solvent model %s' % entry_name)
+        klass = entry_name.split('-')[0]
+        if klass not in ('ddCOSMO', 'ddPCM'):
+            raise RuntimeError('Invalid solvent model %s' % klass)
 
         if self.dry_run:
             if ctx != 'mf':
@@ -288,20 +309,21 @@ class _Task(object):
 
     def handle_mcscf(self, entry_name, ctx):
         config = self.config[entry_name]
+        klass = entry_name.split('-')[0]
+        mc_method, ne_no = klass.split('(')
+        ne, no = re.findall('\d+', klass)
 
         if self.dry_run:
             if ctx not in ('mol', 'mf'):
-                raise RuntimeError('Cannot apply MCSCF to %s' % ctx)
+                ctx = ctx + '._scf'
 
             ctx, last_ctx = 'mc', ctx
-            print('%s = %s.%s' % (ctx, last_ctx, entry_name))
+            print('%s = %s.%s(%s, %s)' % (ctx, last_ctx, mc_method, no, ne))
             print('\n'.join(_assignment_statements(config, ctx)))
             print('%s = %s.run()' % (ctx, ctx))
         else:
             if not isinstance(ctx, (pyscf.gto.mole.Mole, pyscf.scf.hf.SCF)):
-                raise RuntimeError('Cannot apply MCSCF to %s' % ctx.__class__)
-            mc_method, ne_no = entry_name.split('(')
-            ne, no = re.findall('\d+', entry_name)
+                ctx = ctx._scf
             ctx, last_ctx = getattr(ctx, mc_method)(int(no), int(ne)), ctx
             ctx = _update_attributes(ctx, config)
             ctx = ctx.run()
@@ -311,6 +333,12 @@ class _Task(object):
         return ctx
 
     def handle_postscf(self, entry_name, ctx):
+        if self.dry_run:
+            if ctx not in ('mol', 'mf'):
+                ctx = ctx + '._scf'
+        else:
+            if not isinstance(ctx, (pyscf.gto.mole.Mole, pyscf.scf.hf.SCF)):
+                ctx = ctx._scf
         return self._basic_handler(entry_name, ctx, 'postscf')
 
     def handle_geomopt(self, entry_name, ctx):
@@ -320,6 +348,9 @@ class _Task(object):
             print('%s = %s.Gradients().optimizer()' % (ctx, last_ctx))
             print('\n'.join(_assignment_statements(config, ctx)))
             print('%s = %s.run()' % (ctx, ctx))
+            self.extract_results(entry_name, ctx)
+            print('mol = %s.mol' % (ctx,))  # FIXME: maybe .cell for pbc
+            ctx = 'mol'
         else:
             if isinstance(ctx, pyscf.grad.rhf.GradientsBasics):
                 ctx, last_ctx = ctx.optimizer(), ctx
@@ -327,8 +358,10 @@ class _Task(object):
                 ctx, last_ctx = ctx.Gradients().optimizer(), ctx
             ctx = _update_attributes(ctx, config)
             ctx = ctx.run()
+            self.extract_results(entry_name, ctx)
+            # geomopt should pass mole/cell of new geometry to the next stage
+            ctx = ctx.mol  # FIXME: maybe .cell for pbc
 
-        self.extract_results(entry_name, ctx)
         self._ctx.append(ctx)
         return ctx
 
@@ -337,6 +370,7 @@ class _Task(object):
 
     def handle_custom_statements(self, entry_name, ctx):
         config = self.config[entry_name]
+        klass = entry_name.split('-')[0]
         config_rest = dict([(k, v) for k, v in config.items if k not in _PHONY])
 
         if self.dry_run:
@@ -346,10 +380,10 @@ class _Task(object):
                                       + _assignment_statements(kwargs))
             else:
                 args = ',\n    '.join(_assignment_statements(kwargs))
-            print('results["%s"] = %s(%s)' % (entry_name, entry_name, args))
+            print('results["%s"] = %s(%s)' % (entry_name, klass, args))
         else:
             ctx, last_ctx = sys.modules[__name__], ctx
-            for key in entry_name.split('.'):
+            for key in klass.split('.'):
                 if '[' in key or '(' in key:
                     exec('ctx = ctx.'+key)
                 else:
@@ -379,13 +413,14 @@ class _Task(object):
 
         ctx = None
         for token, val in self.config.items():
-            if token in handlers:
-                ctx = handlers[token](token, ctx)
-            elif token in _SCF_METHODS:
+            klass = token.split('-')[0]
+            if klass in handlers:
+                ctx = handlers[klass](token, ctx)
+            elif klass in _SCF_METHODS:
                 ctx = self.handle_scf(token, ctx)
-            elif 'CAS' in token:  # CASCI or CASSCF
+            elif 'CAS' in klass:  # CASCI or CASSCF
                 ctx = self.handle_mcscf(token, ctx)
-            elif '.' in token:
+            elif '.' in klass:
                 ctx = self.handle_custom_statements(token, ctx)
             else:  # post-SCF
                 ctx = self.handle_postscf(token, ctx)

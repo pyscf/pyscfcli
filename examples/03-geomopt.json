@@ -5,8 +5,19 @@
     },
     "KS": {
         "conv_tol": 1e-07,
+        "xc": "pbe",
+        "results": "e_tot"
+    },
+    "geomopt": null,
+    "Mole-1": {
+        "basis": "6-311g(d,p)"
+    },
+    "KS-1": {
         "xc": "b3lyp",
         "results": "e_tot"
     },
-    "geomopt": null
+    "KS-2": {
+        "xc": "camb3lyp",
+        "results": "e_tot"
+    }
 }
