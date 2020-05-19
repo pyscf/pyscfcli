@@ -152,6 +152,9 @@ class _Task(object):
     def handle_version(self, entry_name):
         pass
 
+    # TODO: Phase 2
+    # extra modules to load than the pyscf builtin modules
+    # by default import pyscf and import numpy as np
     def handle_import(self, entry_name):
         config = self.config[entry_name]
         if self.dry_run:
@@ -295,6 +298,7 @@ class _Task(object):
 
     def handle_solvent_model(self, entry_name, ctx):
         klass = entry_name.split('-')[0]
+        if kl
         if klass not in ('ddCOSMO', 'ddPCM'):
             raise RuntimeError('Invalid solvent model %s' % klass)
 
@@ -401,24 +405,25 @@ class _Task(object):
         self.make_header()
 
         handlers = {
-            'version': self.handle_version,
-            'import': self.handle_import,
-            'Mole': self.handle_mole_cell,
-            'Cell': self.handle_mole_cell,
-            'ddCOSMO': self.handle_solvent_model,
-            'ddPCM': self.handle_solvent_model,
-            'Gradients': self.handle_gradients,
-            'geomopt': self.handle_geomopt
+            'VERSION': self.handle_version,
+            'IMPORT': self.handle_import,
+            'MOLE': self.handle_mole_cell,
+            'CELL': self.handle_mole_cell,
+            'DDCOSMO': self.handle_solvent_model,
+            'DDPCM': self.handle_solvent_model,
+            'SOLVENT': self.handle_solvent_model,
+            'GRADIENTS': self.handle_gradients,
+            'GEOMOPT': self.handle_geomopt
         }
 
         ctx = None
         for token, val in self.config.items():
             klass = token.split('-')[0]
-            if klass in handlers:
+            if klass.upper() in handlers:
                 ctx = handlers[klass](token, ctx)
             elif klass in _SCF_METHODS:
                 ctx = self.handle_scf(token, ctx)
-            elif 'CAS' in klass:  # CASCI or CASSCF
+            elif 'CAS' == klass[:3].upper():  # CASCI or CASSCF
                 ctx = self.handle_mcscf(token, ctx)
             elif '.' in klass:
                 ctx = self.handle_custom_statements(token, ctx)
