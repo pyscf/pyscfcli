@@ -49,8 +49,7 @@ _SCF_METHODS = (
 )
 
 def _load_input_config(args):
-    with open(args.config, 'r') as f:
-        conf = f.read()
+    conf = args.config.read()
 
     if args.key:
         kwargs = dict([k.split('=') for k in args.key])
@@ -59,8 +58,8 @@ def _load_input_config(args):
         else:
             conf = conf.format(**kwargs)
 
-    ext = os.path.splitext(args.config)[1]
-    if ext in ('.yaml', '.yml'):
+    ext = os.path.splitext(args.config.name)[1]
+    if ext in ('.yaml', '.yml', ''):  # '' for stdin
         if sys.version_info >= (3, 7):
             parse = ruamel.yaml.safe_load
         else:
@@ -298,7 +297,6 @@ class _Task(object):
 
     def handle_solvent_model(self, entry_name, ctx):
         klass = entry_name.split('-')[0]
-        if kl
         if klass not in ('ddCOSMO', 'ddPCM'):
             raise RuntimeError('Invalid solvent model %s' % klass)
 
@@ -439,7 +437,8 @@ class _Task(object):
 def main(args=None):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('config', help='input config file. It can be a template.')
+    parser.add_argument('config', type=argparse.FileType('r'),
+                        help='input config file. It can be a template.')
     parser.add_argument('-o', '--output', default='yaml', choices=['yaml', 'json', 'QCSchema'],
                         help='output format')
     parser.add_argument('-k','--key', action='append', metavar='key=value',
