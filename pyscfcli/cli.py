@@ -61,7 +61,7 @@ def _load_input_config(args):
     ext = os.path.splitext(args.config.name)[1]
     if ext in ('.yaml', '.yml', ''):  # '' for stdin
         if sys.version_info >= (3, 7):
-            parse = ruamel.yaml.safe_load
+            parse = ruamel.yaml.YAML(typ='safe', pure=True).load
         else:
             # FIXME:
             class OrderedLoader(yaml.Loader):
@@ -418,7 +418,7 @@ class _Task(object):
         for token, val in self.config.items():
             klass = token.split('-')[0]
             if klass.upper() in handlers:
-                ctx = handlers[klass](token, ctx)
+                ctx = handlers[klass.upper()](token, ctx)
             elif klass in _SCF_METHODS:
                 ctx = self.handle_scf(token, ctx)
             elif 'CAS' == klass[:3].upper():  # CASCI or CASSCF
