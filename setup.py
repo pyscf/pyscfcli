@@ -54,6 +54,7 @@ install_requires=[
     'jinja2',
     'geometric',
     'pyberny',
+    'ruamel.yaml'
 ]
 
 
